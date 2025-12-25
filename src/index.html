@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Companion - Debug Mode</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Pixi.js Canvas Container -->
+        <!-- Hybrid Character: DOM for Physics/Click, Canvas for Animation -->
+        <div id="character" style="width: 128px; height: 128px; position: absolute;">
+            <canvas id="sprite-canvas" width="128" height="128"></canvas>
+        </div>
+
+        <!-- Floating UI: Header -->
+        <header>
+            <div class="logo">🤖 AI Comp.</div>
+            <div class="status-bar">
+                <span id="connection-status" style="color: #4ade80;">●</span>
+            </div>
+        </header>
+
+        <!-- Debug Log Area -->
+        <div id="debug-overlay" style="
+            position: fixed; 
+            top: 60px; 
+            left: 10px; 
+            background: transparent; /* No default black box */
+            box-shadow: none;
+            color: lime; 
+            font-family: monospace; 
+            padding: 0; 
+            z-index: 9999; 
+            max-width: 400px;
+            max-height: 300px;
+            overflow-y: hidden;
+            pointer-events: none; /* Let clicks pass through empty space */
+            display: flex;
+            flex-direction: column;
+            gap: 2px;">
+            <!-- Content injected by JS -->
+        </div>
+
+        <!-- Dynamic Speech Bubble -->
+        <div id="speech-bubble" class="bubble">
+            Hello! Debugging...
+        </div>
+
+        <!-- Floating UI: Controls -->
+        <div class="controls-area">
+            <button id="btn-mic" class="mic-button" style="z-index: 9999; cursor: pointer;">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <div id="listening-indicator" class="listening-wave" style="display: none;">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <!-- Floating UI: Chat Log -->
+        <div class="chat-log" id="chat-log" style="z-index: 9998;"></div>
+
+        <audio id="audio-player" style="display: none;"></audio>
+    </div>
+
+    <!-- Load Pixi.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
+    <script src="renderer.js"></script>
+</body>
+
+</html>

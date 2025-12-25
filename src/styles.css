@@ -1,0 +1,319 @@
+/* src/styles.css - Cleaned & Fixed */
+body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: transparent;
+    color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    pointer-events: none;
+    /* Let clicks pass through container by default */
+}
+
+/* --- UI Layers --- */
+
+/* Character Container */
+/* Dynamic Pet Unit */
+.pet-unit {
+    position: absolute;
+    z-index: 50;
+    pointer-events: auto;
+    /* Clickable */
+    cursor: grab;
+    will-change: transform, top, left;
+    transform: translate(-50%, -50%);
+}
+
+.pet-unit:active {
+    cursor: grabbing;
+    transform: translate(-50%, -50%) scale(0.95);
+}
+
+.pet-unit canvas {
+    image-rendering: pixelated;
+    filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.2));
+}
+
+#character {
+    /* Position handled by JS */
+    z-index: 50;
+    pointer-events: auto;
+    /* CRITICAL: Allows clicking */
+    cursor: grab;
+    will-change: transform, top, left;
+    /* Center anchor logic handled in JS draw offset usually, but let's center it */
+    transform: translate(-50%, -50%);
+}
+
+#character:active {
+    cursor: grabbing;
+    transform: translate(-50%, -50%) scale(0.95);
+}
+
+#character canvas {
+    /* Crisp Pixel Art */
+    image-rendering: pixelated;
+    filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.2));
+}
+
+#character img {
+    /* Squash and Stretch "Breathing" */
+    animation: ghostBreath 3s ease-in-out infinite;
+}
+
+.head {
+    width: 32px;
+    height: 28px;
+    background: #ecf0f1;
+    position: absolute;
+    top: 0;
+    left: 16px;
+    border-radius: 4px;
+}
+
+.eye {
+    width: 6px;
+    height: 6px;
+    background: #3498db;
+    position: absolute;
+    top: 8px;
+    box-shadow: 0 0 5px #3498db;
+}
+
+.eye.left {
+    left: 6px;
+}
+
+.eye.right {
+    right: 6px;
+}
+
+.antenna {
+    width: 2px;
+    height: 10px;
+    background: #7f8c8d;
+    position: absolute;
+    top: -10px;
+    left: 15px;
+}
+
+.antenna::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -2px;
+    width: 6px;
+    height: 6px;
+    background: #e74c3c;
+    border-radius: 50%;
+}
+
+.body {
+    width: 40px;
+    height: 32px;
+    background: #2c3e50;
+    position: absolute;
+    top: 30px;
+    left: 12px;
+    border-radius: 4px;
+}
+
+.chest {
+    width: 24px;
+    height: 16px;
+    background: #95a5a6;
+    margin: 8px auto;
+}
+
+.arm {
+    width: 8px;
+    height: 24px;
+    background: #7f8c8d;
+    position: absolute;
+    top: 30px;
+    border-radius: 4px;
+}
+
+.arm.left {
+    left: 0;
+}
+
+.arm.right {
+    right: 0;
+}
+
+.jet {
+    width: 20px;
+    height: 10px;
+    background: #3498db;
+    position: absolute;
+    bottom: -10px;
+    left: 22px;
+    border-radius: 0 0 10px 10px;
+    animation: jetPulse 0.5s infinite alternate;
+}
+
+@keyframes hoverFloat {
+
+    0%,
+    100% {
+        margin-top: 0;
+    }
+
+    50% {
+        margin-top: -15px;
+    }
+}
+
+@keyframes jetPulse {
+    from {
+        opacity: 0.6;
+        box-shadow: 0 0 5px #3498db;
+    }
+
+    to {
+        opacity: 1;
+        box-shadow: 0 0 15px #3498db;
+    }
+}
+
+#pixi-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: auto;
+}
+
+/* UI Elements that should grab clicks */
+header,
+.controls-area,
+.chat-log,
+.bubble {
+    pointer-events: auto;
+}
+
+/* Header - Floating Top Right */
+header {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 20;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 10px 20px;
+    display: flex;
+    gap: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: opacity 0.3s;
+}
+
+header:hover {
+    opacity: 1;
+}
+
+/* Controls - Floating Bottom Center */
+.controls-area {
+    position: absolute;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    /* High Z-index to ensure visibility */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Mic Button */
+.mic-button {
+    width: 70px;
+    height: 70px;
+    font-size: 1.8em;
+    background: rgba(240, 147, 251, 0.9);
+    border: 3px solid white;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.mic-button:hover {
+    transform: scale(1.05);
+    background: rgba(240, 147, 251, 1);
+}
+
+.mic-button.listening {
+    background: #ff4444 !important;
+    /* Bright Red */
+    transform: scale(1.1);
+    box-shadow: 0 0 25px rgba(255, 68, 68, 0.8);
+    border-color: #ffcccc;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 15px rgba(255, 68, 68, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 68, 68, 0);
+    }
+}
+
+/* Chat Log - Floating Bottom Left */
+.chat-log {
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    width: 320px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    border-radius: 15px;
+    padding: 15px;
+    font-size: 0.9em;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 50;
+}
+
+/* Speech Bubble */
+.bubble {
+    position: absolute;
+    background: white;
+    color: #222;
+    padding: 15px 25px;
+    border-radius: 25px;
+    border-bottom-left-radius: 5px;
+    /* Speech bubble tail effect */
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    max-width: 280px;
+    z-index: 100;
+    display: none;
+    line-height: 1.4;
+}
