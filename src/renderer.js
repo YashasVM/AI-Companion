@@ -151,7 +151,8 @@ let actors = {
         targetY: window.innerHeight / 2,
         state: 'IDLE',
         frame: 0, timer: 0, facingRight: true, idleTime: 0, scale: 1.5,
-        sleepTime: 0, sleepDuration: 10000
+        sleepTime: 0, sleepDuration: 10000,
+        decisionTimer: 0 // [NEW] Stability Timer
     },
     human: {
         x: window.innerWidth / 2 - 50,
@@ -162,7 +163,8 @@ let actors = {
         state: 'IDLE',
         frame: 0, timer: 0, facingRight: true,
         scale: 2.5, isTalking: false,
-        lastFaceChange: 0
+        lastFaceChange: 0,
+        decisionTimer: 0 // [NEW] Stability Timer
     }
 };
 
@@ -306,10 +308,20 @@ function updateCat(dt) {
 
     if (pet.state === 'IDLE') {
         pet.idleTime += dt;
-        let r = Math.random();
-        if (r < 0.05) { pet.state = 'SLEEP'; pet.sleepTime = 0; pet.sleepDuration = 5000 + Math.random() * 5000; }
-        else if (r < 0.55) startZoomies(pet, minY);
-        else pickRandomTarget(pet, minY);
+        pet.decisionTimer += dt; // [NEW] Accumulate time
+
+        // [FIX] Stability: Only make decisions every 2-4 seconds
+        if (pet.decisionTimer > 3000) {
+            pet.decisionTimer = 0; // Reset
+            let r = Math.random();
+            if (r < 0.3) { // 30% chance to sleep
+                pet.state = 'SLEEP';
+                pet.sleepTime = 0;
+                pet.sleepDuration = 5000 + Math.random() * 5000;
+            }
+            else if (r < 0.6) startZoomies(pet, minY); // 30% Zoomies
+            else pickRandomTarget(pet, minY); // 40% Walk
+        }
 
         meowTimer += dt;
         if (meowTimer > nextMeowTime) { meowTimer = 0; nextMeowTime = 8000 + Math.random() * 10000; playRealMeow(); }
@@ -371,6 +383,8 @@ function updateHuman(dt) {
     // 1. Chase logic
     let dist = Math.sqrt(Math.pow(cat.x - hum.x, 2) + Math.pow(cat.y - hum.y, 2));
 
+    // [FIX] SYNC: If cat is running, Human should react IMMEDIATELY
+    // Bypass the "decision timer" completely for Chase Logic
     if (cat.state === 'RUN') {
         hum.state = 'CHASE';
         let angle = Math.atan2(cat.y - hum.y, cat.x - hum.x);
@@ -411,16 +425,51 @@ function updateHuman(dt) {
             else if (cosA < -0.6 && hum.facingRight) { hum.facingRight = false; hum.lastFaceChange = Date.now(); }
         }
     } else {
-        if (Math.random() < 0.05) {
-            hum.state = 'WALK';
-            hum.targetX = hum.x + (Math.random() * 200 - 100);
-            if (roamMode === 'BOTTOM') hum.targetY = floorY;
-            else hum.targetY = hum.y + (Math.random() * 100 - 50);
+        // [FIX] Human Stability: Use decision timer
+        hum.decisionTimer += dt;
+
+        // [FIX] FREQUENCY: Decreased decision timer to 2.5s (was 4s) so he acts more often
+        if (hum.decisionTimer > 2500) {
+            hum.decisionTimer = 0;
+            if (Math.random() < 0.4) {
+                hum.state = 'WALK';
+                hum.targetX = hum.x + (Math.random() * 200 - 100);
+                if (roamMode === 'BOTTOM') hum.targetY = floorY;
+                else hum.targetY = hum.y + (Math.random() * 100 - 50);
+            } else {
+                hum.state = hum.isTalking ? 'TALK' : 'IDLE';
+                // [FIX] FREQUENCY: Increased chance to 40% (was 20%)
+                if (Math.random() < 0.4) {
+                    const musings = ["Hmm...", "Where is Kitty?", "Kitty?", "Work time."];
+                    showHumanThought(musings[Math.floor(Math.random() * musings.length)]);
+                }
+            }
+        }
+    }
+
+    // [FIX] FREQUENCY: Decoupled thought logic from state machine
+    // Matches Cat logic. Runs independently of walking/idle.
+    // Except when talking or chasing (distracting states)
+    if (hum.state !== 'TALK' && hum.state !== 'CHASE') {
+        // [FIX] Check if message bubble is visible (during talk or just after)
+        // accessing DOM in loop is slightly expensive but fine for single element
+        const bubble = document.getElementById('speech-bubble');
+        if (bubble && bubble.style.display !== 'none') {
+            // Skip thinking if message box is visible
+            // Do nothing
         } else {
-            hum.state = hum.isTalking ? 'TALK' : 'IDLE';
-            if (Math.random() < 0.005) {
-                const musings = ["Hmm...", "Where is Kitty?", "Kitty?", "Work time."];
-                showHumanThought(musings[Math.floor(Math.random() * musings.length)]);
+            // Add property if missing
+            if (typeof hum.thoughtTimer === 'undefined') { hum.thoughtTimer = 0; hum.nextThoughtTime = 4000; }
+
+            hum.thoughtTimer += dt;
+            if (hum.thoughtTimer > hum.nextThoughtTime) {
+                hum.thoughtTimer = 0;
+                // [FIX] User requested "delay a bit a min of 4 sec gap"
+                hum.nextThoughtTime = 4000 + Math.random() * 4000; // 4s - 8s gap
+                if (Math.random() < 0.6) { // 60% chance to actually think
+                    const musings = ["Hmm...", "Where is Kitty?", "Kitty?", "Work time.", "Need coffee.", "What was that?"];
+                    showHumanThought(musings[Math.floor(Math.random() * musings.length)]);
+                }
             }
         }
     }
@@ -515,7 +564,9 @@ function showHumanThought(text) {
     if (activeHumanThought) activeHumanThought.remove();
     // Offset closer to head: y - 10 (Directly above sprite top)
     // Locked tracking
-    activeHumanThought = spawnFloatingEmoji(text, actors.human.x, actors.human.y, "16px", "#FFF", actors.human);
+    // [FIX] User requested "reduce the size of the tex tof the human's text"
+    // Reducing from 14px to 12px (Aggressive Small)
+    activeHumanThought = spawnFloatingEmoji(text, actors.human.x, actors.human.y, "12px", "#FFF", actors.human);
 }
 
 function spawnFloatingEmoji(text, x, y, size = "24px", color = "#FFF", attachTo = null) {
@@ -544,7 +595,18 @@ function spawnFloatingEmoji(text, x, y, size = "24px", color = "#FFF", attachTo 
     if (attachTo) {
         // Calculate initial relative offset
         bubble.baseX = 20; // Slightly right of center
-        bubble.baseY = -50; // Above head
+
+        // [FIX] User requested "8px" (much lower) for the cat
+        // Cat is smaller object, Human is taller
+        if (attachTo === actors.cat) {
+            bubble.baseY = -20; // ~ 8px visual gap above small sprite
+        } else {
+            // [FIX] User said "too high" -> wants it "near the head"
+            // Previous -20 was mathematically above the 128px box top-edge? 
+            // Let's bring it DOWN significantly into the box area where the sprite head actually is.
+            // +30 should be roughly forehead level of the sprite within the 128px container.
+            bubble.baseY = 30;
+        }
     }
 
     floatingEmojis.push(bubble);
@@ -556,8 +618,10 @@ function updateFloatingEmojis(dt) {
         const b = floatingEmojis[i];
         b.life -= dt;
         // Float Upward Animation (Faster = "Grow Upwards")
-        b.offsetY += dt * 0.06; // Trigger faster rise
-        
+        // [FIX] Restored speed as requested (was 0.01, back to 0.05)
+        // Travel distance is now capped in the position logic
+        b.offsetY += dt * 0.05;
+
         if (b.life <= 0) {
             if (b.el.parentElement) b.el.remove();
             floatingEmojis.splice(i, 1);
@@ -567,16 +631,23 @@ function updateFloatingEmojis(dt) {
         if (b.attachActor) {
             // Follow behavior with vertical growth
             b.el.style.left = (b.attachActor.x + b.baseX) + "px";
+
+            // [FIX] User Request: "Increase speed... but reduce height"
+            // Restore speed to 0.05 (fast)
+            // But CAP the max height (offsetY) to 30px (short travel)
+            let maxTravel = 30;
+            if (b.offsetY > maxTravel) b.offsetY = maxTravel;
+
             // Combine strict tracking position with animating vertical offset
             b.el.style.top = (b.attachActor.y + b.baseY - b.offsetY) + "px";
         } else {
             // Static float
-             let currentTop = parseFloat(b.el.style.top);
-             b.el.style.top = (currentTop - 1.0) + "px"; // Faster static rise
+            let currentTop = parseFloat(b.el.style.top);
+            b.el.style.top = (currentTop - 1.0) + "px"; // Faster static rise
         }
-        
+
         // Fade out logic matching "faded right" (fading out at end)
-        if(b.life < 1000) {
+        if (b.life < 1000) {
             b.el.style.opacity = b.life / 1000;
         }
     }
@@ -587,9 +658,18 @@ function spawnHeart() { spawnFloatingEmoji("💖", actors.cat.x, actors.cat.y); 
 function updateBubblePosition() {
     const bubble = document.getElementById('speech-bubble');
     if (bubble && actors.human) {
-        // Closer to human head (was -120)
-        bubble.style.left = (actors.human.x - 70) + 'px';
-        bubble.style.top = (actors.human.y - 85) + 'px';
+        // [FIX] Move to RIGHT of human
+        // human.x is center-leftish. 
+        // We want bubble to start AFTER the sprite (x + 40)
+        bubble.style.left = (actors.human.x + 40) + 'px';
+        bubble.style.top = (actors.human.y - 10) + 'px';
+
+
+        // Ensure visibility if it has content
+        if (bubble.textContent && bubble.textContent.length > 0 && bubble.style.display === 'none') {
+            // If we missed a display toggle, ensure it's visible if it has text
+            // But we rely on showBubble() to set display block usually
+        }
     }
 }
 
@@ -728,11 +808,23 @@ async function processAudioMessage(base64Audio) {
 async function speak(text) {
     try {
         logToScreen("🗣️ " + text);
+        if (!elevenKey) { logToScreen("❌ No ElevenLabs Key"); return; } // [FIX] Key check
+
         const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'xi-api-key': elevenKey },
             body: JSON.stringify({ text: text, model_id: ELEVEN_MODEL, voice_settings: { stability: 0.5, similarity_boost: 0.8 } })
         });
+
+        // [FIX] Better Error Handling
+        if (!response.ok) {
+            const errText = await response.text();
+            logToScreen(`❌ TTS API Error: ${response.status} - ${errText}`);
+            logToScreen("⚠️ Switching to Fallback Voice...");
+            fallbackSpeak(text); // [NEW] Failover
+            return;
+        }
+
         const blob = await response.blob();
         const audio = document.getElementById('audio-player');
         audio.src = URL.createObjectURL(blob);
@@ -743,11 +835,49 @@ async function speak(text) {
             audio.onended = () => { actors.human.isTalking = false; actors.human.state = 'IDLE'; };
         }
         logToScreen("🔊 Playing audio...");
-        audio.play();
-    } catch (e) { logToScreen("❌ TTS Error: " + e.message); }
+        audio.play().catch(e => {
+            logToScreen("❌ Play Error: " + e.message);
+            fallbackSpeak(text); // [NEW] Failover on play error
+        });
+    } catch (e) {
+        logToScreen("❌ TTS Network Error: " + e.message);
+        fallbackSpeak(text); // [NEW] Failover on network error
+    }
+}
+
+// [NEW] Fallback TTS
+function fallbackSpeak(text) {
+    try {
+        if ('speechSynthesis' in window) {
+            logToScreen("🤖 using System Voice");
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+
+            // Try to find a decent voice
+            const voices = window.speechSynthesis.getVoices();
+            const preferred = voices.find(v => v.name.includes('Google') || v.name.includes('David') || v.name.includes('Zira'));
+            if (preferred) utterance.voice = preferred;
+
+            if (actors.human) {
+                actors.human.isTalking = true;
+                actors.human.state = 'TALK';
+                utterance.onend = () => { actors.human.isTalking = false; actors.human.state = 'IDLE'; };
+            }
+
+            window.speechSynthesis.speak(utterance);
+        } else {
+            logToScreen("❌ No System Voice Available");
+        }
+    } catch (e) {
+        logToScreen("❌ Fallback Failed: " + e.message);
+    }
 }
 
 function showBubble(text) {
+    // [FIX] OVERLAP: If bubble shows, existing thoughts MUST vanish
+    if (activeHumanThought) activeHumanThought.remove();
+
     const bubble = document.getElementById('speech-bubble');
     if (bubble) {
         bubble.textContent = text;

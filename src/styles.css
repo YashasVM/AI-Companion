@@ -304,15 +304,18 @@ header:hover {
     position: absolute;
     background: white;
     color: #222;
-    padding: 15px 25px;
-    border-radius: 25px;
-    border-bottom-left-radius: 5px;
+    /* [FIX] Reduced size as requested */
+    padding: 8px 12px;
+    border-radius: 12px;
+    border-bottom-left-radius: 2px;
     /* Speech bubble tail effect */
-    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     font-family: 'Segoe UI', sans-serif;
-    font-size: 15px;
+    font-size: 10px;
+    /* Tiny font (reduced from 11px) */
     font-weight: 600;
-    max-width: 280px;
+    max-width: 140px;
+    /* Narrower (reduced from 180px) */
     z-index: 100;
     display: none;
     line-height: 1.4;
