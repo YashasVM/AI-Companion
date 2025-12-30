@@ -12,7 +12,9 @@ async function listModels() {
         console.log("Available Models:");
         const models = response.data.models;
         models.forEach(m => {
-            console.log(`- ${m.name} (${m.supportedGenerationMethods.join(', ')})`);
+            if (m.name.includes('gemini')) {
+                console.log(`- ${m.name} (${m.supportedGenerationMethods.join(', ')})`);
+            }
         });
     } catch (error) {
         console.log("Error Status:", error.response?.status);

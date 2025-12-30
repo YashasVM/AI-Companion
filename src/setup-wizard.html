@@ -95,7 +95,32 @@
         .help-link:hover {
             color: #888;
         }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 16px;
+            padding: 0;
+            width: auto;
+            margin: 0;
+        }
+
+        .toggle-password:hover {
+            color: #4facfe;
+        }
     </style>
+    <!-- Font Awesome for Eye Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
 <body>
@@ -105,12 +130,22 @@
 
         <div class="input-group">
             <label>Google Gemini API Key</label>
-            <input type="password" id="geminiKey" placeholder="AIzaSy..." />
+            <div class="input-wrapper">
+                <input type="password" id="geminiKey" placeholder="AIzaSy..." />
+                <button type="button" class="toggle-password" onclick="toggleVisibility('geminiKey', this)">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
         </div>
 
         <div class="input-group">
             <label>ElevenLabs API Key</label>
-            <input type="password" id="elevenKey" placeholder="sk_..." />
+            <div class="input-wrapper">
+                <input type="password" id="elevenKey" placeholder="sk_..." />
+                <button type="button" class="toggle-password" onclick="toggleVisibility('elevenKey', this)">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
         </div>
 
         <div class="input-group">
@@ -125,19 +160,33 @@
     <script>
         const { ipcRenderer, shell } = require('electron');
 
+        function toggleVisibility(inputId, btn) {
+            const input = document.getElementById(inputId);
+            const icon = btn.querySelector('i');
+
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = "password";
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
         // [NEW] Check for existing keys on load
         window.addEventListener('DOMContentLoaded', async () => {
             try {
                 const creds = await ipcRenderer.invoke('get-saved-credentials');
-                if (creds && creds.hasGeminiKey) {
-                    // We can't actually retrieve the raw passwords from store if we hashed them? 
-                    // Wait, electron-store usually stores plain text unless encryption is used.
-                    // Assuming we can read them back for editing since it's a local app.
+                if (creds && creds.geminiKey) { // Check for actual key presence
+                    // Populate fields
                     if (creds.geminiKey) document.getElementById('geminiKey').value = creds.geminiKey;
                     if (creds.elevenKey) document.getElementById('elevenKey').value = creds.elevenKey;
                     if (creds.elevenVoice) document.getElementById('voiceId').value = creds.elevenVoice;
+
                     document.querySelector('h1').textContent = "Settings ⚙️";
-                    document.querySelector('button').textContent = "Update & Restart";
+                    document.querySelector('button[onclick="saveAndStart()"]').textContent = "Update & Restart";
                 }
             } catch (e) {
                 console.log("No existing creds found to populate.");

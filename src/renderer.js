@@ -3,7 +3,7 @@ const { ipcRenderer } = require('electron');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // --- Configuration ---
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-3-flash-preview";
 const ELEVEN_MODEL = "eleven_turbo_v2_5";
 const MEOW_SOUNDS = ["meow1.mp3", "meow2.mp3", "meow3.mp3"];
 
@@ -21,8 +21,70 @@ let isVisionActive = false; // [NEW] Manual vision toggle
 let isDebugActive = true; // [NEW] Manual debug toggle (default ON)
 
 // Helper to log to screen
+// --- Dynamic Model Selection ---
+async function selectBestGeminiModel(apiKey) {
+    try {
+        logToScreen("🔍 Checking available models for this key...");
+        // Fetch models using REST because the SDK doesn't always expose listModels easily in browser env
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+        const data = await response.json();
+
+        if (!data.models) throw new Error("No models returned");
+
+        const available = data.models.map(m => m.name.replace('models/', ''));
+
+        // Priority List (Best to Worst)
+        const priorities = [
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-001",
+            "gemini-1.5-pro",
+            "gemini-pro",
+            "gemini-1.0-pro"
+        ];
+
+        // Also check if user has access to cool preview models and prioritize them
+        const previews = available.filter(m => m.includes('gemini-3') || m.includes('gemini-2.5'));
+        if (previews.length > 0) {
+            // Sort previews to get the 'latest' one (simple string sort usually works for dates/versions)
+            previews.sort().reverse();
+            const bestPreview = previews[0];
+            logToScreen(`✨ Wow! You have preview access: ${previews.join(', ')}`);
+            priorities.unshift(bestPreview);
+        }
+
+        for (const preferred of priorities) {
+            if (available.includes(preferred)) {
+                logToScreen(`✅ Selected Model: ${preferred}`);
+                return preferred;
+            }
+        }
+
+        // Fallback: Just pick the first 'generateContent' capable gemini model
+        const fallback = available.find(m => m.includes('gemini') && !m.includes('vision'));
+        if (fallback) {
+            logToScreen(`⚠️ Priority models missing. Using fallback: ${fallback}`);
+            return fallback;
+        }
+
+        throw new Error("No compatible Gemini model found.");
+
+    } catch (e) {
+        logToScreen(`❌ Model Discovery Failed: ${e.message}. Defaulting to gemini-1.5-flash`);
+        return "gemini-1.5-flash";
+    }
+}
+
+// Helper to log to screen
 function logToScreen(msg) {
-    console.log(msg);
+    // [FIX] Forward logs to Main Process so they appear in VS Code Terminal
+    ipcRenderer.send('log-to-console', msg);
+
+    // Also try to show critical errors in the speech bubble if possible
+    if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('failed')) {
+        // [FIX] User Request: Only show simple "Error" in bubble, full details in terminal
+        showBubble("Error");
+    }
+
     const overlay = document.getElementById('debug-overlay');
     if (overlay) {
         overlay.style.display = 'block'; // Ensure visible logic
@@ -54,6 +116,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         elevenKey = await ipcRenderer.invoke('get-env', 'ELEVENLABS_API_KEY');
         voiceId = await ipcRenderer.invoke('get-env', 'ELEVENLABS_VOICE_ID');
         logToScreen(`✅ Keys Loaded.`);
+
+        // [NEW] Select Best Model Dynamically
+        if (geminiKey) {
+            GEMINI_MODEL = await selectBestGeminiModel(geminiKey);
+        }
+
     } catch (e) {
         logToScreen("❌ Key Load Failed: " + e.message);
     }

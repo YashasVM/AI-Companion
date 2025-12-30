@@ -5,6 +5,13 @@ const fs = require('fs');
 require('dotenv').config();
 const CredentialService = require('./services/CredentialService');
 
+// [FIX] Separate Dev/Prod User Data to avoid Cache Locks and Conflicts
+if (!app.isPackaged) {
+  const userDataPath = app.getPath('userData');
+  app.setPath('userData', userDataPath + '-dev');
+  console.log('🚧 Running in Dev Mode: Using separate data folder:', app.getPath('userData'));
+}
+
 
 let mainWindow;
 
@@ -62,6 +69,11 @@ function createMainWindow() {
   ipcMain.on('set-ignore-mouse-events', (event, ignore, options) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win) win.setIgnoreMouseEvents(ignore, { forward: true });
+  });
+
+  // [NEW] Forward logs from Renderer to Terminal
+  ipcMain.on('log-to-console', (event, msg) => {
+    console.log(`[RENDERER] ${msg}`);
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));

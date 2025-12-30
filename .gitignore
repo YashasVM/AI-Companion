@@ -8,7 +8,9 @@ node_modules/
 
 # Build outputs
 dist/
-build/
+# Build outputs
+dist/
+out/
 out/
 
 # Electron
