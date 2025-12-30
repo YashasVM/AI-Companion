@@ -3,7 +3,8 @@ const { ipcRenderer } = require('electron');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // --- Configuration ---
-const GEMINI_MODEL = "gemini-3-flash-preview";
+// [DYNAMIC] Model will be selected based on API key permissions
+let GEMINI_MODEL = "gemini-3-flash-preview";
 const ELEVEN_MODEL = "eleven_turbo_v2_5";
 const MEOW_SOUNDS = ["meow1.mp3", "meow2.mp3", "meow3.mp3"];
 
@@ -45,8 +46,16 @@ async function selectBestGeminiModel(apiKey) {
         // Also check if user has access to cool preview models and prioritize them
         const previews = available.filter(m => m.includes('gemini-3') || m.includes('gemini-2.5'));
         if (previews.length > 0) {
-            // Sort previews to get the 'latest' one (simple string sort usually works for dates/versions)
-            previews.sort().reverse();
+            // [FIX] Priority Sort: Prefer "Flash" over "Pro" to avoid 429 Quota limits
+            // Flash usually has free tier, Pro often has 0 limit for previews
+            previews.sort((a, b) => {
+                const aFlash = a.includes('flash');
+                const bFlash = b.includes('flash');
+                if (aFlash && !bFlash) return -1;
+                if (!aFlash && bFlash) return 1;
+                return b.localeCompare(a); // Default to newer version
+            });
+
             const bestPreview = previews[0];
             logToScreen(`✨ Wow! You have preview access: ${previews.join(', ')}`);
             priorities.unshift(bestPreview);
@@ -81,8 +90,7 @@ function logToScreen(msg) {
 
     // Also try to show critical errors in the speech bubble if possible
     if (msg.toLowerCase().includes('error') || msg.toLowerCase().includes('failed')) {
-        // [FIX] User Request: Only show simple "Error" in bubble, full details in terminal
-        showBubble("Error");
+        showBubble(`⚠️ ${msg}`);
     }
 
     const overlay = document.getElementById('debug-overlay');
@@ -119,7 +127,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // [NEW] Select Best Model Dynamically
         if (geminiKey) {
+            logToScreen(`🔑 Using Key (ends in ...${geminiKey.slice(-4)})`);
             GEMINI_MODEL = await selectBestGeminiModel(geminiKey);
+            logToScreen(`🤖 Active Model: ${GEMINI_MODEL}`);
         }
 
     } catch (e) {
