@@ -21,9 +21,11 @@ class CredentialService {
         let elevenVoice = this.store.get('eleven_voice_id');
 
         // 2. Fallback to process.env (legacy/dev)
-        if (!geminiKey && process.env.GOOGLE_API_KEY) {
+        // 2. Fallback to process.env (legacy/dev) - Check BOTH possible keys
+        const envGemini = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+        if (!geminiKey && envGemini) {
             console.log('📦 Migrating Gemini key from .env to secure store...');
-            geminiKey = process.env.GOOGLE_API_KEY;
+            geminiKey = envGemini;
             this.store.set('google_api_key', geminiKey);
         }
 
@@ -39,8 +41,15 @@ class CredentialService {
         }
 
         // 3. Inject back into process.env so the rest of the app works seamlessly
-        if (geminiKey) process.env.GOOGLE_API_KEY = geminiKey;
-        if (elevenKey) process.env.ELEVEN_API_KEY = elevenKey;
+        // [FIX] Populate BOTH variations to ensure compatibility across renderer/main
+        if (geminiKey) {
+            process.env.GOOGLE_API_KEY = geminiKey;
+            process.env.GEMINI_API_KEY = geminiKey;
+        }
+        if (elevenKey) {
+            process.env.ELEVEN_API_KEY = elevenKey;
+            process.env.ELEVENLABS_API_KEY = elevenKey;
+        }
         if (elevenVoice) process.env.ELEVEN_VOICE_ID = elevenVoice;
 
         return {
@@ -57,8 +66,15 @@ class CredentialService {
         if (elevenVoice) this.store.set('eleven_voice_id', elevenVoice);
 
         // Update current session
-        if (geminiKey) process.env.GOOGLE_API_KEY = geminiKey;
-        if (elevenKey) process.env.ELEVEN_API_KEY = elevenKey;
+        // [FIX] Update BOTH variations
+        if (geminiKey) {
+            process.env.GOOGLE_API_KEY = geminiKey;
+            process.env.GEMINI_API_KEY = geminiKey;
+        }
+        if (elevenKey) {
+            process.env.ELEVEN_API_KEY = elevenKey;
+            process.env.ELEVENLABS_API_KEY = elevenKey;
+        }
         if (elevenVoice) process.env.ELEVEN_VOICE_ID = elevenVoice;
     }
 
