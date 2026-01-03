@@ -288,12 +288,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             // UI Update
             viewBtns.forEach(b => {
                 b.classList.remove('active');
-                b.style.background = 'transparent';
-                b.style.color = '#cbd5e1';
+                // Remove manual overrides to let CSS take over
+                b.style.background = '';
+                b.style.color = '';
             });
             e.target.classList.add('active');
-            e.target.style.background = '#334155';
-            e.target.style.color = 'white';
+            // Remove manual overrides
+            e.target.style.background = '';
+            e.target.style.color = '';
 
             // Logic Update
             const mode = e.target.getAttribute('data-mode');
@@ -302,14 +304,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // [NEW] Apply Look Button
+    // [NEW] Chip Selection Logic
+    const chips = document.querySelectorAll('.select-chip');
+    chips.forEach(chip => {
+        chip.addEventListener('click', (e) => {
+            const group = chip.getAttribute('data-group');
+            // Deselect all in this group
+            document.querySelectorAll(`.select-chip[data-group="${group}"]`).forEach(c => c.classList.remove('active'));
+            // Select clicked
+            chip.classList.add('active');
+        });
+    });
+
+    // [NEW] Apply Look Button
     const btnApply = document.getElementById('btn-apply-look');
     if (btnApply) {
         btnApply.addEventListener('click', () => {
-            const compSelect = document.getElementById('select-companion');
-            const avSelect = document.getElementById('select-avatar');
+            // Find active chips
+            const activeCompanion = document.querySelector('.select-chip[data-group="companion"].active');
+            const activeAvatar = document.querySelector('.select-chip[data-group="avatar"].active');
 
-            companionType = compSelect.value;
-            avatarType = avSelect.value;
+            if (activeCompanion) companionType = activeCompanion.getAttribute('data-value');
+            if (activeAvatar) avatarType = activeAvatar.getAttribute('data-value');
 
             generatePixelSprites();
 
