@@ -5,7 +5,23 @@
 Before starting, ensure you have:
 1.  **Node.js**: Version 16.0 or higher ([Download](https://nodejs.org/)).
 2.  **npm**: Included with Node.js.
-3.  **A Microphone**: For voice interaction.
+3.  **Python**: Version 3.8 or higher ([Download](https://www.python.org/downloads/)) — Required for Agent Mode automation.
+4.  **A Microphone**: For voice interaction.
+
+### Python Dependencies (Required for Agent Mode)
+
+After installing Python, install the required packages:
+```bash
+pip install -r requirements.txt
+```
+
+Or install manually:
+```bash
+pip install pydirectinput pyperclip
+```
+
+> **Note**: `pydirectinput` is Windows-only and required for mouse/keyboard control.
+> `pyperclip` enables clipboard paste functionality.
 
 ---
 
@@ -49,6 +65,12 @@ The app will verify your keys and then the companion will appear on your desktop
 ---
 
 ## Troubleshooting
+
+### "Python bridge not running" / "pydirectinput not installed"
+- Ensure Python is installed and added to PATH.
+- Run `pip install -r requirements.txt` from the project root.
+- On Windows, you may need to run as Administrator.
+- Try `pip install pydirectinput pyperclip` manually.
 
 ### "Error: Invalid API Key"
 - Double-check you didn't copy any extra spaces.

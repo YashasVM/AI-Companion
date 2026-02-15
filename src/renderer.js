@@ -697,28 +697,51 @@ function initPixi() {
 function setupInteraction() {
     let isDragging = false;
     let dragOffsetX = 0, dragOffsetY = 0, lastDragSound = 0;
+    let dragStartX = 0, dragStartY = 0;
+    let dragStarted = false;
+    const DRAG_THRESHOLD = 5; // pixels
 
     charContainer.addEventListener('mousedown', (e) => {
         const dx = e.clientX - actors.cat.x;
         const dy = e.clientY - actors.cat.y;
         if (Math.abs(dx) < 60 && Math.abs(dy) < 60) {
             isDragging = true;
+            dragStarted = false;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
             dragOffsetX = e.clientX - actors.cat.x;
             dragOffsetY = e.clientY - actors.cat.y;
-            actors.cat.state = 'DRAGGED';
-            playDragSound();
         }
     });
 
     window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
-        actors.cat.x = e.clientX - dragOffsetX;
-        actors.cat.y = e.clientY - dragOffsetY;
-        if (Date.now() - lastDragSound > 600) { playDragSound(); lastDragSound = Date.now(); }
+        const moveX = e.clientX - dragStartX;
+        const moveY = e.clientY - dragStartY;
+        if (!dragStarted && (Math.abs(moveX) > DRAG_THRESHOLD || Math.abs(moveY) > DRAG_THRESHOLD)) {
+            dragStarted = true;
+            actors.cat.state = 'DRAGGED';
+            playDragSound();
+        }
+        if (dragStarted) {
+            actors.cat.x = e.clientX - dragOffsetX;
+            actors.cat.y = e.clientY - dragOffsetY;
+            if (Date.now() - lastDragSound > 600) { playDragSound(); lastDragSound = Date.now(); }
+        }
     });
 
-    window.addEventListener('mouseup', () => {
-        if (isDragging) { isDragging = false; actors.cat.state = 'IDLE'; actors.cat.vy = 5; }
+    window.addEventListener('mouseup', (e) => {
+        if (isDragging) {
+            if (dragStarted) {
+                actors.cat.state = 'IDLE';
+                actors.cat.vy = 5;
+            } else {
+                // Handle click action here if needed
+                // Example: actors.cat.onClick && actors.cat.onClick(e);
+            }
+            isDragging = false;
+            dragStarted = false;
+        }
     });
 
     charContainer.addEventListener('mouseenter', () => setIgnoreMouseEvents(false));
@@ -1785,10 +1808,87 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = document.getElementById('btn-toggle-controls');
     const controlsOverlay = document.querySelector('.controls-overlay');
 
+    // Drag state - shared between toggle and drag logic
+    let justDragged = false;
+    
+    const TOGGLE_SIZE = 48;
+    const BUTTON_SIZE = 40;
+    const GAP = 12;
+    const NUM_BUTTONS = 5;
+    const STACK_LENGTH = (BUTTON_SIZE * NUM_BUTTONS) + (GAP * (NUM_BUTTONS - 1)); // ~248px
+
+    // Function to position actions-stack based on toggle button position
+    function positionActionsStack() {
+        if (!toggleBtn || !actionsStack) return;
+        
+        const rect = toggleBtn.getBoundingClientRect();
+        const toggleCenterX = rect.left + TOGGLE_SIZE / 2;
+        const toggleCenterY = rect.top + TOGGLE_SIZE / 2;
+        
+        // Calculate available space in each direction
+        const spaceAbove = rect.top;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceLeft = rect.left;
+        const spaceRight = window.innerWidth - rect.right;
+        
+        // Remove all direction classes
+        actionsStack.classList.remove('expand-up', 'expand-down', 'expand-left', 'expand-right');
+        
+        // Determine best direction (prefer vertical over horizontal)
+        let expandDir = 'up';
+        if (spaceAbove >= STACK_LENGTH + 10) {
+            expandDir = 'up';
+        } else if (spaceBelow >= STACK_LENGTH + 10) {
+            expandDir = 'down';
+        } else if (spaceLeft >= STACK_LENGTH + 10) {
+            expandDir = 'left';
+        } else if (spaceRight >= STACK_LENGTH + 10) {
+            expandDir = 'right';
+        } else {
+            // Not enough space anywhere, pick the best available
+            const maxSpace = Math.max(spaceAbove, spaceBelow, spaceLeft, spaceRight);
+            if (maxSpace === spaceAbove) expandDir = 'up';
+            else if (maxSpace === spaceBelow) expandDir = 'down';
+            else if (maxSpace === spaceLeft) expandDir = 'left';
+            else expandDir = 'right';
+        }
+        
+        actionsStack.classList.add('expand-' + expandDir);
+        
+        // Position based on direction
+        if (expandDir === 'up') {
+            actionsStack.style.left = rect.left + 'px';
+            actionsStack.style.top = 'auto';
+            actionsStack.style.bottom = (window.innerHeight - rect.top + GAP) + 'px';
+            actionsStack.style.right = 'auto';
+        } else if (expandDir === 'down') {
+            actionsStack.style.left = rect.left + 'px';
+            actionsStack.style.top = (rect.bottom + GAP) + 'px';
+            actionsStack.style.bottom = 'auto';
+            actionsStack.style.right = 'auto';
+        } else if (expandDir === 'left') {
+            actionsStack.style.left = 'auto';
+            actionsStack.style.right = (window.innerWidth - rect.left + GAP) + 'px';
+            actionsStack.style.top = rect.top + 'px';
+            actionsStack.style.bottom = 'auto';
+        } else { // right
+            actionsStack.style.left = (rect.right + GAP) + 'px';
+            actionsStack.style.right = 'auto';
+            actionsStack.style.top = rect.top + 'px';
+            actionsStack.style.bottom = 'auto';
+        }
+    }
+
     // 1. Toggle Logic
     if (toggleBtn && actionsStack) {
         toggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            
+            // Don't toggle if we just finished dragging
+            if (justDragged) {
+                justDragged = false;
+                return;
+            }
             
             // Toggle Hidden Class
             actionsStack.classList.toggle('hidden');
@@ -1798,17 +1898,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Collapsed: Show Hamburger
                 toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
                 toggleBtn.title = "Expand Menu";
+                toggleBtn.classList.add('collapsed-style');
             } else {
                 // Expanded: Show X
                 toggleBtn.innerHTML = '<i class="fas fa-times"></i>';
                 toggleBtn.title = "Collapse";
+                toggleBtn.classList.remove('collapsed-style');
+                
+                // Position the actions stack relative to toggle button
+                positionActionsStack();
             }
         });
 
-        // Hover Effect Handlers (Pass through inputs correctly)
-        if (controlsOverlay) {
-            controlsOverlay.addEventListener('mouseenter', () => setIgnoreMouseEvents(false));
-            controlsOverlay.addEventListener('mouseleave', () => setIgnoreMouseEvents(true));
+        // Hover Effect Handlers
+        toggleBtn.addEventListener('mouseenter', () => setIgnoreMouseEvents(false));
+        toggleBtn.addEventListener('mouseleave', () => {
+            if (actionsStack.classList.contains('hidden')) {
+                setIgnoreMouseEvents(true);
+            }
+        });
+        actionsStack.addEventListener('mouseenter', () => setIgnoreMouseEvents(false));
+        actionsStack.addEventListener('mouseleave', () => setIgnoreMouseEvents(true));
+        
+        // Initial positioning on load (if not collapsed)
+        if (!actionsStack.classList.contains('hidden')) {
+            // Small delay to ensure DOM is fully rendered
+            setTimeout(() => {
+                positionActionsStack();
+            }, 50);
         }
     }
 
@@ -1819,12 +1936,83 @@ document.addEventListener('DOMContentLoaded', () => {
         // Force Expand
         actionsStack.classList.remove('hidden');
         toggleBtn.innerHTML = '<i class="fas fa-times"></i>';
+        toggleBtn.classList.remove('collapsed-style');
+        positionActionsStack();
         
         showBubble("UI Reset! 🚑");
     });
 
-    // 2. Drag Logic Removed (Fixed Position Bottom Right)
-    // The previous drag logic has been removed to enforce the fixed "Floating Action Button" style.
+    // 2. Drag Logic for Toggle Button (only when collapsed)
+    let isDragging = false;
+    let hasMoved = false;
+    let startX = 0;
+    let startY = 0;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('mousedown', (e) => {
+            // Only allow dragging when collapsed
+            if (!actionsStack.classList.contains('hidden')) return;
+            
+            isDragging = true;
+            hasMoved = false;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            const rect = toggleBtn.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            
+            // Add dragging class immediately to disable transitions
+            toggleBtn.classList.add('dragging');
+            
+            // Prevent text selection while dragging
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            // Check if actually moved (to distinguish click from drag)
+            if (Math.abs(e.clientX - startX) > 5 || Math.abs(e.clientY - startY) > 5) {
+                hasMoved = true;
+            }
+            
+            if (!hasMoved) return;
+            
+            // Calculate new position
+            let newX = e.clientX - dragOffsetX;
+            let newY = e.clientY - dragOffsetY;
+            
+            // Bound to window
+            const padding = 20;
+            const maxX = window.innerWidth - TOGGLE_SIZE - padding;
+            const maxY = window.innerHeight - TOGGLE_SIZE - padding;
+            
+            newX = Math.max(padding, Math.min(newX, maxX));
+            newY = Math.max(padding, Math.min(newY, maxY));
+            
+            // Apply position to toggle button directly
+            toggleBtn.style.bottom = 'auto';
+            toggleBtn.style.right = 'auto';
+            toggleBtn.style.left = newX + 'px';
+            toggleBtn.style.top = newY + 'px';
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                // Remove dragging class
+                toggleBtn.classList.remove('dragging');
+                
+                if (hasMoved) {
+                    // Signal to prevent click toggle
+                    justDragged = true;
+                }
+            }
+            isDragging = false;
+        });
+    }
     
 });
 // ==========================================

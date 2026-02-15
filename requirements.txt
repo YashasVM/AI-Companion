@@ -1,0 +1,8 @@
+# Python dependencies for AI Desktop Companion
+# Install with: pip install -r requirements.txt
+
+# Required for mouse/keyboard automation (Windows only)
+pydirectinput>=1.0.4
+
+# Required for clipboard operations (paste functionality)
+pyperclip>=1.8.2
