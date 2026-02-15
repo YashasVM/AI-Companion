@@ -186,6 +186,7 @@ Glitch uses a **hybrid multimodal agent architecture**:
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v16 or higher)
+- [Python](https://www.python.org/downloads/) (v3.8 or higher) — Required for mouse/keyboard automation
 - **Google Gemini API Key** ([Get it here](https://aistudio.google.com/app/apikey))
 - **ElevenLabs API Key** ([Get it here](https://elevenlabs.io/))
 
@@ -197,12 +198,17 @@ Glitch uses a **hybrid multimodal agent architecture**:
     cd AI-Companion
     ```
 
-2.  **Install dependencies**
+2.  **Install Node.js dependencies**
     ```bash
     npm install
     ```
 
-3.  **Configure Environment**
+3.  **Install Python dependencies** (Required for Agent Mode automation)
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Configure Environment**
     Create a `.env` file in the root directory (copy `.env.example`):
     ```env
     GOOGLE_API_KEY=your_gemini_key
@@ -210,7 +216,7 @@ Glitch uses a **hybrid multimodal agent architecture**:
     ELEVEN_VOICE_ID=your_voice_id
     ```
 
-4.  **Run the application**
+5.  **Run the application**
     ```bash
     npm start
     ```

@@ -35,7 +35,16 @@ function startPythonBridge() {
 
     function tryNextPython() {
         if (attemptIndex >= pythonCommands.length) {
-            console.error('❌ Failed to start Python bridge. Install Python and pydirectinput.');
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.error('❌ PYTHON NOT FOUND');
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.error('Agent Mode requires Python to be installed.');
+            console.error('');
+            console.error('1. Install Python from: https://www.python.org/downloads/');
+            console.error('2. Make sure to check "Add Python to PATH" during installation');
+            console.error('3. After installing Python, run: pip install -r requirements.txt');
+            console.error('4. Restart the application');
+            console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             isRestarting = false;
             return;
         }
@@ -63,6 +72,24 @@ function startPythonBridge() {
             pythonProcess.stderr.on('data', (data) => {
                 const error = data.toString();
                 console.error('Python Bridge Error:', error);
+
+                // Check for missing pydirectinput dependency
+                if (error.includes('pydirectinput not installed')) {
+                    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.error('❌ MISSING PYTHON DEPENDENCIES');
+                    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.error('Agent Mode requires Python packages to control mouse/keyboard.');
+                    console.error('');
+                    console.error('To fix this, run:');
+                    console.error('   pip install -r requirements.txt');
+                    console.error('');
+                    console.error('Or manually:');
+                    console.error('   pip install pydirectinput pyperclip');
+                    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    cleanupPythonProcess();
+                    isRestarting = false;
+                    return;
+                }
 
                 // If it's a "not found" error, try next command
                 if (error.includes('not found') || error.includes('No module')) {
