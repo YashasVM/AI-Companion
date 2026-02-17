@@ -1,299 +1,197 @@
-# 🤖 AI Desktop Companion — *Glitch*
+# AI Desktop Companion (Glitch)
+
+An AI companion that lives on your desktop, understands context from your screen, and can execute real actions.
 
 <p align="center">
   <img src="./assets/anim.gif" width="70%" />
 </p>
 
-
-<p align="center">
-  <b>The AI that lives on your desktop — sees, thinks, and acts.</b>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/license-MIT-blue.svg">
-  <img src="https://img.shields.io/badge/version-1.0.2-green.svg">
-  <img src="https://img.shields.io/badge/platform-Windows-darkgrey.svg">
-  <img src="https://img.shields.io/badge/status-Stable-success.svg">
-</p>
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.0.2-green.svg)](#)
+[![Platform](https://img.shields.io/badge/platform-Windows-darkgrey.svg)](#)
 
 ---
 
-## 🧠 What is Glitch?
-<p align="center" >
-  <img  src="https://media1.tenor.com/m/dzSWLc8TGtgAAAAC/jarvis.gif" width="250">
-  (Just kidding, don't try that!!)
-</p>
-We grew up dreaming of companions like **JARVIS** — agents that don’t just listen, but *act*.  
-Somewhere along the way, assistants got stuck in browser tabs.
+## What It Does
 
-**Glitch breaks the fourth wall of the operating system.**
+Glitch combines:
+- screen understanding (vision),
+- voice interaction,
+- automation (mouse, keyboard, shell, app launch),
+- and a desktop overlay interface with character interaction.
 
-AI Desktop Companion (Glitch) is a **fully multimodal, autonomous desktop agent** that:
-
-- 👁️ Sees your screen  
-- 🎤 Talks with you  
-- 🤖 Controls your system  
-- 🖥️ Lives directly on your desktop as a playful character  
-- …and a lot more (I want you to explore 😄)
-
-This isn’t just an assistant you *use*.  
-It’s one you *work with*.
+It is basically the assistant that escaped the browser tab and now pays rent on your desktop.
 
 ---
 
-## 🎬 Live Demo
+## Screenshots
 
-▶️ **Full Demo (Vimeo)**  
-https://vimeo.com/1150677379
-  
-> The Vimeo demo shows Glitch executing real tasks end-to-end.
-
-([Also check out our landing page here!!](https://ai-desktop-companion-glitch.vercel.app/))
-
----
-
-## ✨ What Can Glitch Do?
-
-### 🖥️ Lives on Your Desktop
-
+### Desktop Overlay
 <p align="center">
   <img src="./assets/overlay.png" width="80%">
 </p>
 
-Glitch runs as a **transparent, click-through desktop overlay**.  
-He shares your workspace instead of hiding in a window or sidebar.
-
----
-
-### 🎨 Interactive & Playful Characters
-
-<p align="center">
-  <img src="./assets/character.png" width="60%">
-</p>
-
-- Interactive pixel-style characters  
-- Drag, click, and interact  
-- Customizable appearance and behavior  
-
-Inspired by classic desktop pets, powered by modern multimodal AI.
-
----
-
-### ⚙️ All Modes, One Companion
-
+### Modes
 <p align="center">
   <img src="./assets/modes.png" width="70%">
 </p>
 
-Everything is built in:
-
-- 🎤 **Voice Mode**
-- 👁️ **Vision Mode**
-- 🤖 **Agent Mode**
-- ⚙️ **Settings** (character & voice customization)
-
-No switching apps. No broken context.
-
----
-
-### 🤖 Agent Mode — Real Automation
-
+### Agent Panel
 <p align="center">
   <img src="./assets/agent.png" width="80%">
 </p>
 
-This is **not just another chatbot**.
-
-Agent Mode lets Glitch:
-- Control mouse & keyboard
-- Open applications
-- Execute multi-step workflows
-- Do real things on your system
-
-There’s always a stop button. Safety matters.
-
----
-
-### 🚀 Developer Accelerator
-
+### Developer Workflow
 <p align="center">
   <img src="./assets/developer.png" width="80%">
 </p>
 
-Glitch is especially useful while building.
-
-Here, it creates a complete **Next.js project structure** from a single voice command — turning ideas into runnable code instantly.
-
----
-
-### 📝 Smart Summarization & Notes
-
+### Notes and Summaries
 <p align="center">
   <img src="./assets/Notepad.png" width="80%">
 </p>
 
-Glitch can:
-- Summarize information
-- Extract key points
-- Save them directly to **Notepad or files**
-
-Your AI remembers *for* you.
-
----
-
-### 🌐 On-Demand Web Search
-
+### Web Search Automation
 <p align="center">
   <img src="./assets/googleSearch.png" width="80%">
 </p>
 
-Ask once — Glitch searches Google, parses results, and gives you the useful bits.
-
-Hands-free.
-
----
-
-### 🧠 The Personality: Glitch
-
+### Character System
 <p align="center">
-  <img src="./assets/Glitch.png" width="70%">
+  <img src="./assets/character.png" width="60%">
 </p>
 
-Glitch isn’t robotic.
+---
 
-He has personality.  
-He reacts.  
-He feels present.
+## Demo
 
-Working with AI finally feels *alive*, not transactional.
+- Full demo (Vimeo): https://vimeo.com/1150677379  
+- Landing page: https://ai-desktop-companion-glitch.vercel.app/
 
 ---
 
-## 🧬 How It Works (High Level)
+## 1) Quick Start (For Non-Technical Users)
 
-Glitch uses a **hybrid multimodal agent architecture**:
+If you just want to install and use the app:
 
-- 🧠 **Brain** — Google Gemini 2.0 Flash (chat + vision)
-- 👁️ **Vision** — Screen understanding via screenshots
-- 🎤 **Voice** — ElevenLabs (low-latency TTS)
-- 🤖 **Automation** — nut.js (mouse, keyboard, OS control)
-- 🖥️ **UI Soul** — Electron + PixiJS (desktop overlay)
+1. Download the Windows installer (`.exe`):  
+   **Direct download:**  
+   https://github.com/YashasVM/AI-Companion/releases/latest/download/AI%20Desktop%20Companion%20Setup%201.0.1.exe
+2. Run the installer.
+3. Launch **AI Desktop Companion**.
+4. In setup, choose provider:
+   - `Gemini` (cloud, full voice + realtime flow), or
+   - `Ollama` (local LLM option).
+5. Start using:
+   - `Mic` for voice mode,
+   - `Vision` to allow screen understanding,
+   - `Agent` for autonomous tasks.
+
+### Minimum Requirements
+
+- Windows 10/11
+- Microphone (recommended)
+- Internet for Gemini mode
+- Optional: local Ollama install for offline/local mode
 
 ---
 
+## 2) Advanced Setup (For Developers)
 
-## 🚀 Quick Start
+### Tech Stack
+
+- Electron
+- Bun (runtime/package manager)
+- Google Gemini SDK + Gemini Live
+- Optional Ollama local provider
+- `@nut-tree-fork/nut-js` + Python bridge for low-level input automation
 
 ### Prerequisites
-- [Bun](https://bun.sh/) (latest stable)
-- [Python](https://www.python.org/downloads/) (v3.8 or higher) — Required for mouse/keyboard automation
-- **Google Gemini API Key** ([Get it here](https://aistudio.google.com/app/apikey))
-- **ElevenLabs API Key** ([Get it here](https://elevenlabs.io/))
 
-### Why Bun?
-- Faster dependency installation
-- Faster script execution
-- Lower startup overhead for a smoother dev experience
+- Bun: https://bun.sh/
+- Python 3.8+
+- Optional: Ollama (if using local model): https://ollama.com/
 
 ### Installation
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/KirthanNB/AI-Companion.git
-    cd AI-Companion
-    ```
-
-2.  **Install dependencies with Bun (recommended for best performance)**
-    ```bash
-    bun install
-    ```
-
-3.  **Install Python dependencies** (Required for Agent Mode automation)
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-4.  **Configure Environment**
-    Create a `.env` file in the root directory (copy `.env.example`):
-    ```env
-    GOOGLE_API_KEY=your_gemini_key
-    ELEVEN_API_KEY=your_elevenlabs_key
-    ELEVEN_VOICE_ID=your_voice_id
-    ```
-
-5.  **Run the application**
-    ```bash
-    bun run start
-    ```
-
-### Common Bun Commands
 ```bash
-bun run start      # Start app
-bun run dev        # Start app in dev mode
-bun run build:win  # Build Windows installer
+git clone https://github.com/YashasVM/AI-Companion.git
+cd AI-Companion
+bun install
+pip install -r requirements.txt
 ```
 
----
+### Run
 
-## 📖 User Manual
+```bash
+bun run start
+```
 
-### 🎮 Controls
-| Icon | Name | Description |
-| :---: | :--- | :--- |
-| 🎤 | **Mic** | Click to speak to the AI. |
-| 🤖 | **Agent Mode** | Toggle autonomous mode for complex tasks. |
-| 🛑 | **Stop** | Emergency stop for any active automation. |
+### Useful Bun Commands
 
-### 🗣️ Voice Commands
-- **"Create a portfolio website"** -> Generates a project folder and opens VS Code.
-- **"What is on my screen?"** -> Analyzes the current window content.
-- **"Open YouTube and search for lofi beats"** -> Automates the browser.
-- **"Type a python script to calculate fibonacci"** -> Tyupes code into your active editor.
+```bash
+bun run start       # Run app
+bun run dev         # Run with Electron dev flag
+bun run build:win   # Build Windows installer (.exe)
+```
 
----
+### Environment Variables
 
-## 🛠️ Development
+Configuration can be done in the setup wizard or with `.env`:
+
+```env
+# Provider: gemini | ollama
+LLM_PROVIDER=gemini
+
+# Gemini
+GOOGLE_API_KEY=your_gemini_key
+GEMINI_VOICE_NAME=Puck
+
+# Ollama
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_MODEL=llama3.1:8b
+```
 
 ### Project Structure
-```
+
+```txt
 ai-companion/
 ├── src/
-│   ├── ai/                 # AI logic & GameAgent
-│   ├── services/           # Automation & helper services
-│   ├── renderer.js         # Frontend logic (PixiJS)
-│   └── main.js             # Electron main process
-├── assets/                 # Images & sounds
-└── package.json            # Dependencies & scripts
+│   ├── ai/                 # Agent logic
+│   ├── services/           # AI/automation/input/capture services
+│   ├── renderer.js         # Frontend runtime
+│   ├── main.js             # Electron main process
+│   └── setup-wizard.html   # Onboarding UI
+├── assets/                 # Images, media
+├── dist/                   # Build output
+└── package.json
 ```
 
-### Building for Production
-To create an installer for your OS:
+### Build Output
 
-```bash
-# Windows
-bun run build:win
+After `bun run build:win`, installer is generated in:
+
+```txt
+dist/AI Desktop Companion Setup 1.0.1.exe
 ```
+
+### Troubleshooting
+
+- If automation fails:
+  - Reinstall Python dependencies:
+    `pip install -r requirements.txt`
+- If Ollama mode does not respond:
+  - Ensure Ollama is running (`ollama serve`)
+  - Ensure selected model exists (`ollama list`)
+- If voice mode is unavailable:
+  - Switch provider to `Gemini` (realtime voice path currently tied to Gemini).
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to get started.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## 📄 License
+## License
 
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-<p align="center">
-  <img src="https://media1.tenor.com/m/DwLEW1YOP-4AAAAd/bowing-thank-you.gif" width="120">
-</p>
-
-
-<p align="center">
-  Made with ❤️ by Kirthan NB & Rohith M
-</p>
-
-
-
+MIT License. See [LICENSE](LICENSE).
