@@ -18,18 +18,31 @@ let mainWindow;
 
 // Keep track of windows
 let setupWindow;
+const appIconPath = fs.existsSync(path.join(__dirname, '../build/icon.png'))
+  ? path.join(__dirname, '../build/icon.png')
+  : path.join(__dirname, 'assets/icon.png');
+
+function getLLMConfig() {
+  return {
+    provider: process.env.LLM_PROVIDER || 'gemini',
+    ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
+    ollamaModel: process.env.OLLAMA_MODEL || 'llama3.1:8b'
+  };
+}
 
 function createSetupWindow() {
   setupWindow = new BrowserWindow({
-    width: 600,
-    height: 600,
+    width: 1260,
+    height: 820,
+    minWidth: 980,
+    minHeight: 700,
     backgroundColor: '#1a1a1a',
     title: "AI Companion Setup",
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     },
-    icon: path.join(__dirname, 'assets/icon.png'),
+    icon: appIconPath,
     autoHideMenuBar: true
   });
 
@@ -59,7 +72,7 @@ function createMainWindow() {
       enableRemoteModule: true,
       backgroundThrottling: false
     },
-    icon: path.join(__dirname, 'assets/icon.png',),
+    icon: appIconPath,
     skipTaskbar: true // Don't show in taskbar for overlay
   });
 
@@ -124,6 +137,13 @@ async function initApp() {
     // Global Hotkey for Voice Mode (Ctrl+Shift+L)
     globalShortcut.register('CommandOrControl+Shift+L', () => {
         const service = getGeminiLiveService();
+        if (!service) {
+             if(mainWindow) {
+               mainWindow.webContents.send('voice-mode-unavailable', 'Realtime voice mode is available only when provider is Gemini.');
+               mainWindow.webContents.send('voice-mode-changed', false);
+             }
+             return;
+        }
         if (service.isActive) {
              service.stop();
              if(mainWindow) mainWindow.webContents.send('voice-mode-changed', false);
@@ -177,7 +197,7 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
+    createMainWindow();
   }
 });
 
@@ -205,8 +225,14 @@ function getGameAgent() {
   if (!gameAgentInstance) {
     try {
       console.log('🎯 Creating GameAgent instance...');
+      const llmConfig = getLLMConfig();
       gameAgentInstance = new GameAgent(
-        process.env.GEMINI_API_KEY,
+        {
+          provider: llmConfig.provider,
+          geminiApiKey: process.env.GEMINI_API_KEY,
+          ollamaBaseUrl: llmConfig.ollamaBaseUrl,
+          ollamaModel: llmConfig.ollamaModel
+        },
         (msg) => {
           // Logger: Send to all windows for log display
           BrowserWindow.getAllWindows().forEach(win => {
@@ -235,6 +261,10 @@ function getGameAgent() {
 // IPC handlers
 ipcMain.handle('get-env', (event, key) => {
   return process.env[key];
+});
+
+ipcMain.handle('get-llm-config', async () => {
+  return getLLMConfig();
 });
 
 // Screen Capture Handler
@@ -435,6 +465,11 @@ ipcMain.handle('start-game-agent', async (event, instruction) => {
 // Gemini Live Voice Mode Setup
 let geminiLiveInstance = null;
 function getGeminiLiveService() {
+  const llmConfig = getLLMConfig();
+  if (llmConfig.provider !== 'gemini') {
+    return null;
+  }
+
   if (!geminiLiveInstance) {
     const GeminiLiveService = require('./services/GeminiLiveService');
     const agent = getGameAgent();
@@ -460,7 +495,17 @@ function getGeminiLiveService() {
 }
 
 ipcMain.handle('toggle-voice-mode', async () => {
+  const llmConfig = getLLMConfig();
+  if (llmConfig.provider !== 'gemini') {
+    if (mainWindow) {
+      mainWindow.webContents.send('voice-mode-unavailable', 'Realtime voice mode is available only when provider is Gemini.');
+      mainWindow.webContents.send('voice-mode-changed', false);
+    }
+    return false;
+  }
+
   const service = getGeminiLiveService();
+  if (!service) return false;
   if (service.isActive) {
     service.stop();
     if(mainWindow) mainWindow.webContents.send('voice-mode-changed', false);
@@ -474,7 +519,7 @@ ipcMain.handle('toggle-voice-mode', async () => {
 
 ipcMain.on('audio-input-chunk', (event, chunk) => {
    const service = getGeminiLiveService();
-   if (service.isActive) {
+   if (service && service.isActive) {
        // chunk is usually base64 from renderer
        service.sendAudioChunk(chunk);
    }
@@ -484,6 +529,7 @@ let visionInterval = null;
 
 ipcMain.on('vision-mode-changed', (event, isActive) => {
    const service = getGeminiLiveService();
+   if (!service) return;
    service.setVisionEnabled(isActive); // [NEW] Enforce permissions
    
    if (isActive) {
@@ -532,6 +578,7 @@ ipcMain.handle('stop-game-agent', async () => {
 ipcMain.handle('save-setup-info', async (event, data) => {
   const CredentialService = require('./services/CredentialService');
   CredentialService.saveCredentials(data);
+  gameAgentInstance = null;
   
   // [NEW] Reset Gemini Live instance so it picks up the new voice/key on next use
   if (geminiLiveInstance) {

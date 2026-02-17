@@ -18,6 +18,7 @@ let roamMode = 'FULL'; // FULL, BOTTOM, NONE
 let currentRequestId = 0; // [NEW] Track requests for interruption
 let isVisionActive = false; // [NEW] Manual vision toggle
 let isDebugActive = true; // [NEW] Manual debug toggle (default ON)
+let llmProvider = 'gemini';
 // [NEW] Character State
 let companionType = 'CAT'; // CAT, DOG, UFO
 let avatarType = 'MALE'; // MALE, FEMALE, ALIEN
@@ -118,6 +119,10 @@ ipcRenderer.on('voice-mode-changed', async (event, isActive) => {
         if(micBtn) micBtn.classList.remove('listening');
         stopRealtimeAudio();
     }
+});
+
+ipcRenderer.on('voice-mode-unavailable', (event, message) => {
+    showBubble(message || "Voice mode unavailable for current provider.");
 });
 
 async function startRealtimeAudio() {
@@ -260,6 +265,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 2. Load Keys
     try {
         geminiKey = await ipcRenderer.invoke('get-env', 'GEMINI_API_KEY');
+        const llmConfig = await ipcRenderer.invoke('get-llm-config');
+        llmProvider = llmConfig?.provider || 'gemini';
         // ElevenLabs Removed
         // elevenKey = await ipcRenderer.invoke('get-env', 'ELEVENLABS_API_KEY');
         // voiceId = await ipcRenderer.invoke('get-env', 'ELEVENLABS_VOICE_ID');
@@ -271,6 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             GEMINI_MODEL = await selectBestGeminiModel(geminiKey);
             logToScreen(`🤖 Active Model: ${GEMINI_MODEL}`);
         }
+        logToScreen(`🧠 Provider: ${llmProvider}`);
 
     } catch (e) {
         logToScreen("❌ Key Load Failed: " + e.message);
@@ -935,6 +943,19 @@ function generatePixelSprites() {
             rect(ctxC, ox + 6, oy + 12, 4, 8, '#bdc3c7'); rect(ctxC, ox + 22, oy + 12, 4, 8, '#bdc3c7'); let k = (f % 2 === 0) ? -2 : 2; rect(ctxC, ox + 10, oy + 26 + k, 3, 5, '#bdc3c7'); rect(ctxC, ox + 19, oy + 26 - k, 3, 5, '#bdc3c7');
         }
     }
+
+    // Detail pass: adds outlines/highlights so sprites read better on desktop backgrounds.
+    for (let row = 0; row < 5; row++) {
+        for (let frame = 0; frame < 4; frame++) {
+            const ox = frame * 32;
+            const oy = row * 32;
+            rect(ctxC, ox + 8, oy + 29, 16, 1, 'rgba(0,0,0,0.22)'); // feet shadow edge
+            rect(ctxC, ox + 11, oy + 10, 1, 1, '#ffffff'); // eye light
+            rect(ctxC, ox + 18, oy + 10, 1, 1, '#ffffff');
+            rect(ctxC, ox + 8, oy + 14, 2, 1, '#7f8c8d'); // whisker accents
+            rect(ctxC, ox + 22, oy + 14, 2, 1, '#7f8c8d');
+        }
+    }
     catSpriteSheet = cs;
 
     // --- AVATAR SPRITE GENERATION ---
@@ -1020,7 +1041,7 @@ function generatePixelSprites() {
 
 
 function gameLoop(timestamp) {
-    const dt = timestamp - lastTime;
+    const dt = Math.min(timestamp - lastTime, 50);
     lastTime = timestamp;
     if (roamMode !== 'NONE') {
         updateCat(dt);
@@ -1308,16 +1329,34 @@ function startZoomies(p, minY = 0) {
 
 function drawActorOnCtx(ctx, actor, sheet) {
     if (!sheet) return;
+    const t = performance.now() * 0.001;
+    const bob = actor.state === 'SLEEP' ? Math.sin(t * 2.5) * 1.6 : Math.sin(t * 5) * 0.8;
+    const stretch = actor.state === 'RUN' ? 0.92 : 1.0;
+    const squash = actor.state === 'RUN' ? 1.08 : 1.0;
+
     ctx.save();
-    ctx.translate(64, 64);
+    ctx.translate(64, 64 + bob);
     // Corrected Flipping: Positive Scale = Right (Default), Negative = Left
-    ctx.scale(actor.facingRight ? actor.scale : -actor.scale, actor.scale);
+    ctx.scale((actor.facingRight ? actor.scale : -actor.scale) * stretch, actor.scale * squash);
     let row = 0;
     if (actor.state === 'WALK' || actor.state === 'RUN' || actor.state === 'CHASE') row = 1;
     if (actor.state === 'SLEEP' || actor.state === 'TALK') row = 2;
     if (actor.state === 'SURPRISE') row = 3;
     if (actor.state === 'DRAGGED') row = 4;
+
+    // Ground shadow for depth.
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(0, 16, 12, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.drawImage(sheet, actor.frame * 32, row * 32, 32, 32, -16, -16, 32, 32);
+
+    // Subtle highlight pass to make sprites feel less flat.
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-10, -14, 8, 6);
+    ctx.globalAlpha = 1;
     ctx.restore();
 }
 
@@ -1549,6 +1588,11 @@ function toggleListening() {
     if (actors.human) {
         actors.human.isTalking = false;
         actors.human.state = 'IDLE';
+    }
+
+    if (llmProvider !== 'gemini') {
+        showBubble("Voice mode requires Gemini. Switch provider in Settings.");
+        return;
     }
 
     // [NEW] Use Realtime Voice Mode

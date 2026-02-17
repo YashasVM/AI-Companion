@@ -2,17 +2,40 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { captureScreen } = require('../services/ScreenObserver');
 const InputController = require('../services/InputController');
 const EnhancedAutomationService = require('../services/EnhancedAutomationService');
+const OllamaService = require('../services/OllamaService');
 const { handleShellAction } = require('../tools/shell');
 const fs = require('fs');
 const path = require('path');
 
 class GameAgent {
-    constructor(apiKey, logger = console.log, captureFunction = null, speaker = null) {
-        this.genAI = new GoogleGenerativeAI(apiKey);
-        // Updated Model List: Using actually available models
+    constructor(configOrApiKey, logger = console.log, captureFunction = null, speaker = null) {
+        this.config = typeof configOrApiKey === 'string'
+            ? {
+                provider: 'gemini',
+                geminiApiKey: configOrApiKey,
+                ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
+                ollamaModel: process.env.OLLAMA_MODEL || 'llama3.1:8b'
+            }
+            : {
+                provider: configOrApiKey?.provider || 'gemini',
+                geminiApiKey: configOrApiKey?.geminiApiKey,
+                ollamaBaseUrl: configOrApiKey?.ollamaBaseUrl || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434',
+                ollamaModel: configOrApiKey?.ollamaModel || process.env.OLLAMA_MODEL || 'llama3.1:8b'
+            };
+
+        this.provider = this.config.provider;
+        this.genAI = null;
         this.models = ["gemini-2.5-flash", "gemini-2.0-flash-exp", "gemini-2.0-flash"];
         this.currentModelIndex = 0;
-        this.model = this.genAI.getGenerativeModel({ model: this.models[0] });
+        this.model = null;
+        this.ollama = null;
+
+        if (this.provider === 'gemini') {
+            this.genAI = new GoogleGenerativeAI(this.config.geminiApiKey);
+            this.model = this.genAI.getGenerativeModel({ model: this.models[0] });
+        } else {
+            this.ollama = new OllamaService(this.config.ollamaBaseUrl, this.config.ollamaModel);
+        }
 
         this.log = logger;
         this.speak = speaker || ((text) => logger(`[SPEAK]: ${text}`));
@@ -26,6 +49,7 @@ class GameAgent {
         this.baseDelay = 3000;      // Base delay between actions (3s - responsive)
         this.maxDelay = 10000;      // Max delay when idle (10s)
         this.currentDelay = this.baseDelay;
+        this.adaptiveDelay = 0;
         this.staticCounter = 0;     // Count how many times screen was static
         this.lastImage = null;      // For deduplication
         this.isExecuting = false;   // Guard for long-running actions
@@ -49,8 +73,9 @@ class GameAgent {
         this.log(`📈 Resolution Scaling: ${width}x${height} (x${this.scaleX.toFixed(2)}, y${this.scaleY.toFixed(2)})`);
 
         // [NEW] Vision Logging Setup
+        this.enableVisionLogging = process.env.AGENT_SAVE_VISION === 'true';
         this.visionDir = path.join(process.cwd(), 'vision');
-        if (!fs.existsSync(this.visionDir)) {
+        if (this.enableVisionLogging && !fs.existsSync(this.visionDir)) {
             fs.mkdirSync(this.visionDir, { recursive: true });
         }
     }
@@ -61,42 +86,41 @@ class GameAgent {
 
         this.log("🎮 Game Agent Starting...");
 
-        // Connection & Model Discovery Test
-        this.log(`📡 Discovering available models...`);
-        try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${this.genAI.apiKey}`;
-            const resp = await fetch(url);
-            const data = await resp.json();
+        this.log(`[LLM] Provider: ${this.provider}`);
+        if (this.provider === 'gemini') {
+            this.log(`📡 Discovering available models...`);
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${this.genAI.apiKey}`;
+                const resp = await fetch(url);
+                const data = await resp.json();
 
-            if (data.models) {
-                const names = data.models.map(m => m.name.replace('models/', ''));
-                this.log(`✅ Available Models: ${names.join(', ')}`);
+                if (data.models) {
+                    const names = data.models.map(m => m.name.replace('models/', ''));
+                    this.log(`✅ Available Models: ${names.join(', ')}`);
 
-                // [NEW] Tool Discovery
-                this.log("🧰 Scanning for tools...");
-                await this.discoverTools();
+                    const preferred = names.find(n => n.includes('2.5-flash')) ||
+                        names.find(n => n.includes('2.0-flash')) ||
+                        names.find(n => n.includes('1.5-flash')) ||
+                        names.find(n => n.includes('flash')) ||
+                        names.find(n => n.includes('pro'));
 
-                // Smart Selection: Prioritize newer Flash models (2.0/2.5) if available
-                const preferred = names.find(n => n.includes('2.5-flash')) ||
-                    names.find(n => n.includes('2.0-flash')) ||
-                    names.find(n => n.includes('1.5-flash')) ||
-                    names.find(n => n.includes('flash')) ||
-                    names.find(n => n.includes('pro'));
-
-                if (preferred) {
-                    this.log(`🎯 Switching to found model: ${preferred}`);
-                    this.model = this.genAI.getGenerativeModel({ model: preferred });
-                    // Update fallback list to trust this model first
-                    this.models = [preferred, ...this.models];
+                    if (preferred) {
+                        this.log(`🎯 Switching to found model: ${preferred}`);
+                        this.model = this.genAI.getGenerativeModel({ model: preferred });
+                        this.models = [preferred, ...this.models];
+                    } else {
+                        this.log("⚠️ No obvious vision model found in list. Trying default.");
+                    }
                 } else {
-                    this.log("⚠️ No obvious vision model found in list. Trying default.");
+                    this.log(`⚠️ Listing failed: ${JSON.stringify(data)}`);
                 }
-            } else {
-                this.log(`⚠️ Listing failed: ${JSON.stringify(data)}`);
+            } catch (e) {
+                this.log("⚠️ Discovery Warning: " + e.message);
             }
-        } catch (e) {
-            this.log("⚠️ Discovery Warning: " + e.message);
         }
+
+        this.log("🧰 Scanning for tools...");
+        await this.discoverTools();
 
         // Initial focus click
         const { width, height } = require('electron').screen.getPrimaryDisplay().workAreaSize;
@@ -140,8 +164,8 @@ class GameAgent {
                 // Using passed-in captureFunction which handles overlay hiding in main.js
                 const base64Image = await this.captureFunction({ base64: true, width: 960, height: 540, format: 'jpeg' });
 
-                // [NEW] Vision Logging: Save every capture
-                if (base64Image) {
+                // [OPTIMIZATION] Vision logging is optional to reduce disk IO.
+                if (this.enableVisionLogging && base64Image) {
                     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
                     const fileName = `vision-${timestamp}.png`;
                     const filePath = path.join(this.visionDir, fileName);
@@ -191,7 +215,7 @@ class GameAgent {
 
                 // [OPTIMIZED] Rate limit protection: Minimum 10s between API calls (increased from 5s)
                 const timeSinceLastCall = Date.now() - this.lastApiCallTime;
-                const minInterval = 10000; // Increased from 5s to 10s
+                const minInterval = this.provider === 'ollama' ? 3000 : 10000;
                 if (timeSinceLastCall < minInterval) {
                     this.log(`⏱️ Rate limit protection: waiting ${minInterval - timeSinceLastCall}ms`);
                     await new Promise(r => setTimeout(r, minInterval - timeSinceLastCall));
@@ -382,6 +406,16 @@ class GameAgent {
         };
 
         try {
+            if (this.provider === 'ollama') {
+                const text = await this.ollama.chat({
+                    prompt,
+                    imageBase64: base64Image
+                });
+                const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                this.log(`🔍 Ollama Raw Output: ${jsonStr.substring(0, 100)}...`);
+                return JSON.parse(jsonStr);
+            }
+
             const result = await this.model.generateContent([prompt, imagePart]);
             this.log("🧠 Think Complete."); // Debug
             const response = result.response;
@@ -401,7 +435,7 @@ class GameAgent {
                 return null;
             }
 
-            if (e.message.includes('404') || e.message.includes('not found')) {
+            if (this.provider === 'gemini' && (e.message.includes('404') || e.message.includes('not found'))) {
                 this.log(`⚠️ Model ${this.models[this.currentModelIndex]} failed. Switching...`);
                 this.currentModelIndex++;
                 if (this.currentModelIndex < this.models.length) {

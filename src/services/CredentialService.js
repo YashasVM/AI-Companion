@@ -45,19 +45,37 @@ class CredentialService {
         let geminiVoice = this.store.get('gemini_voice_name') || "Puck";
         process.env.GEMINI_VOICE_NAME = geminiVoice;
 
+        // --- PROVIDER LOGIC ---
+        const llmProvider = this.store.get('llm_provider') || process.env.LLM_PROVIDER || 'gemini';
+        const ollamaBaseUrl = this.store.get('ollama_base_url') || process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
+        const ollamaModel = this.store.get('ollama_model') || process.env.OLLAMA_MODEL || 'llama3.1:8b';
+
+        process.env.LLM_PROVIDER = llmProvider;
+        process.env.OLLAMA_BASE_URL = ollamaBaseUrl;
+        process.env.OLLAMA_MODEL = ollamaModel;
+
+        const hasOllamaConfig = !!(ollamaBaseUrl && ollamaModel);
+        const isComplete = llmProvider === 'ollama' ? hasOllamaConfig : !!geminiKey;
+
         return {
             geminiKey,
             usingDefaultGemini,
             geminiVoice, // [NEW] Return voice
-            isComplete: !!geminiKey
+            llmProvider,
+            ollamaBaseUrl,
+            ollamaModel,
+            isComplete
         };
     }
 
-    saveCredentials({ geminiKey, geminiVoice }) {
+    saveCredentials({ geminiKey, geminiVoice, llmProvider, ollamaBaseUrl, ollamaModel }) {
         if (geminiKey) this.store.set('google_api_key', geminiKey);
         else if (geminiKey === '') this.store.delete('google_api_key');
 
         if (geminiVoice) this.store.set('gemini_voice_name', geminiVoice);
+        if (llmProvider) this.store.set('llm_provider', llmProvider);
+        if (ollamaBaseUrl) this.store.set('ollama_base_url', ollamaBaseUrl);
+        if (ollamaModel) this.store.set('ollama_model', ollamaModel);
 
         // Update current session
         if (geminiKey) {
@@ -67,11 +85,23 @@ class CredentialService {
         if (geminiVoice) {
             process.env.GEMINI_VOICE_NAME = geminiVoice;
         }
+        if (llmProvider) {
+            process.env.LLM_PROVIDER = llmProvider;
+        }
+        if (ollamaBaseUrl) {
+            process.env.OLLAMA_BASE_URL = ollamaBaseUrl;
+        }
+        if (ollamaModel) {
+            process.env.OLLAMA_MODEL = ollamaModel;
+        }
     }
 
     clearCredentials() {
         this.store.delete('google_api_key');
         this.store.delete('gemini_voice_name');
+        this.store.delete('llm_provider');
+        this.store.delete('ollama_base_url');
+        this.store.delete('ollama_model');
         this.store.delete('eleven_api_key');
         this.store.delete('eleven_voice_id');
     }
