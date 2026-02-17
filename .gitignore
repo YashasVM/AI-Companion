@@ -5,6 +5,7 @@ node_modules/
 # Environment variables (IMPORTANT: Never commit API keys!)
 .env
 
+venv/
 
 # Build outputs
 dist/
