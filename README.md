@@ -185,10 +185,15 @@ Glitch uses a **hybrid multimodal agent architecture**:
 ## 🚀 Quick Start
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v16 or higher)
+- [Bun](https://bun.sh/) (latest stable)
 - [Python](https://www.python.org/downloads/) (v3.8 or higher) — Required for mouse/keyboard automation
 - **Google Gemini API Key** ([Get it here](https://aistudio.google.com/app/apikey))
 - **ElevenLabs API Key** ([Get it here](https://elevenlabs.io/))
+
+### Why Bun?
+- Faster dependency installation
+- Faster script execution
+- Lower startup overhead for a smoother dev experience
 
 ### Installation
 
@@ -198,9 +203,9 @@ Glitch uses a **hybrid multimodal agent architecture**:
     cd AI-Companion
     ```
 
-2.  **Install Node.js dependencies**
+2.  **Install dependencies with Bun (recommended for best performance)**
     ```bash
-    npm install
+    bun install
     ```
 
 3.  **Install Python dependencies** (Required for Agent Mode automation)
@@ -218,8 +223,15 @@ Glitch uses a **hybrid multimodal agent architecture**:
 
 5.  **Run the application**
     ```bash
-    npm start
+    bun run start
     ```
+
+### Common Bun Commands
+```bash
+bun run start      # Start app
+bun run dev        # Start app in dev mode
+bun run build:win  # Build Windows installer
+```
 
 ---
 
@@ -259,7 +271,7 @@ To create an installer for your OS:
 
 ```bash
 # Windows
-npm run build:win
+bun run build:win
 ```
 
 ---
@@ -282,3 +294,6 @@ This project is licensed under the [MIT License](LICENSE).
 <p align="center">
   Made with ❤️ by Kirthan NB & Rohith M
 </p>
+
+
+
