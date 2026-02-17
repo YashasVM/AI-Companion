@@ -195,3 +195,11 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
+---
+---
+@@ -282,3 +294,6 @@ This project is licensed under the [MIT License](LICENSE).
+<p align="center">
+  Made with ❤️ by Kirthan NB & Rohith M
+</p>
+---
