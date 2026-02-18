@@ -1,6 +1,7 @@
 # AI Desktop Companion (Glitch)
 
 An AI companion that lives on your desktop, understands context from your screen, and can execute real actions.
+Maintained by `YashasVM`.
 
 <p align="center">
   <img src="./assets/anim.gif" width="70%" />
