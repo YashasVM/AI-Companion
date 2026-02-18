@@ -258,8 +258,46 @@ function getGameAgent() {
   return gameAgentInstance;
 }
 
+const allowedEnvKeys = new Set([
+  'GEMINI_API_KEY',
+  'GOOGLE_API_KEY',
+  'GEMINI_VOICE_NAME',
+  'LLM_PROVIDER',
+  'OLLAMA_BASE_URL',
+  'OLLAMA_MODEL'
+]);
+
+function normalizeHttpUrl(urlInput) {
+  let raw = String(urlInput || '').trim();
+  if (!raw) throw new Error('Missing URL');
+  if (!/^https?:\/\//i.test(raw)) {
+    raw = `https://${raw}`;
+  }
+  const parsed = new URL(raw);
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error('Only http/https URLs are allowed');
+  }
+  return parsed.toString();
+}
+
+function getMappedApp(appInput) {
+  const appName = String(appInput || '').trim().toLowerCase();
+  const appMap = {
+    'calculator': 'calc',
+    'notepad': 'notepad',
+    'vscode': 'code',
+    'vs code': 'code',
+    'visual studio code': 'code',
+    'terminal': 'cmd',
+    'explorer': 'explorer',
+    'chrome': 'chrome'
+  };
+  return appMap[appName] || null;
+}
+
 // IPC handlers
 ipcMain.handle('get-env', (event, key) => {
+  if (!allowedEnvKeys.has(key)) return null;
   return process.env[key];
 });
 
@@ -308,14 +346,13 @@ ipcMain.handle('capture-clean', async (event, options = { width: 1024, height: 5
 async function handlePerformAction(event, action) {
   const { shell } = require('electron'); // Ensure shell is available
   try {
+    if (!action || typeof action !== 'object') {
+      return "Invalid action payload";
+    }
     console.log('🤖 Performing action:', action);
 
     if (action.type === 'open') {
-      // Prefer system default browser for simple "Open" commands
-      // This is faster and uses the user's logged-in session (cookies etc)
-      let url = action.url;
-      if (!url.startsWith('http')) url = 'https://' + url;
-      
+      const url = normalizeHttpUrl(action.url);
       console.log(`Open External: ${url}`);
       await shell.openExternal(url);
       return "Opened " + url;
@@ -331,32 +368,16 @@ async function handlePerformAction(event, action) {
 
     // Phase 7: Desktop Control
     if (action.type === 'app') {
-      const { exec } = require('child_process');
-      const appName = action.app.toLowerCase();
-      let command = `start ${action.app}`;
-
-      const appMap = {
-        'calculator': 'calc',
-        'notepad': 'notepad',
-        'vscode': 'code',
-        'vs code': 'code',
-        'visual studio code': 'code',
-        'terminal': 'cmd',
-        'explorer': 'explorer',
-        'chrome': 'chrome'
-      };
-
-      if (appMap[appName]) {
-        command = `start ${appMap[appName]}`;
-      } else {
-        // Handle names with spaces by quoting
-        command = `start "" "${action.app}"`;
+      const { execFile } = require('child_process');
+      const mapped = getMappedApp(action.app);
+      if (!mapped) {
+        return "Blocked: Unsupported app name";
       }
 
-      exec(command, (err) => {
+      execFile('cmd.exe', ['/c', 'start', '', mapped], { windowsHide: true }, (err) => {
         if (err) console.error("Failed to launch app:", err);
       });
-      return "Launching " + action.app;
+      return "Launching " + mapped;
     }
 
     // Phase 7: Typing (Keyboard Simulation)
